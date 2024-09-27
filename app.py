@@ -1,51 +1,53 @@
 import streamlit as st
 import requests
-from collections import defaultdict
+from datetime import datetime
 
-# Set your News API key and topics
-api_key = '24e059157f3047aea5330b2aa4fae652'  # Replace with your actual API key
-topics = [
-    "annuities",
-    "pension risk transfer",
-    "Bermuda reinsurance",
-    "cyberattacks in life insurance",
-    "technology in life insurance"
-]
+# Function to fetch news articles
+def fetch_news(api_key, query):
+    url = f'https://newsapi.org/v2/everything?q={query}&apiKey={api_key}'
+    response = requests.get(url)
 
-# Create a function to fetch news articles
-def fetch_news():
-    articles_by_topic = defaultdict(list)
-    topic_counts = {topic: 0 for topic in topics}
+    if response.status_code == 200:
+        articles = response.json().get('articles', [])
+        return articles
+    else:
+        st.error(f'Failed to retrieve news: {response.status_code}')
+        return []
 
-    for topic in topics:
-        url = f'https://newsapi.org/v2/everything?q={topic}&language=en&sortBy=publishedAt&apiKey={api_key}'
-        response = requests.get(url)
+# Set your News API key
+api_key = '24e059157f3047aea5330b2aa4fae652'  # Replace with your News API key
 
-        if response.status_code == 200:
-            articles = response.json().get('articles', [])
-            for article in articles:
-                title = article['title']
-                link = article['url']
-                articles_by_topic[topic].append((title, link))
-                topic_counts[topic] += 1
+# Title of the app
+st.title('Life Insurance Industry News Curator')
 
-    return articles_by_topic, topic_counts
+# Display the current date and time
+current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.write(f"Current Date and Time: {current_time}")
 
-# Streamlit app layout
-st.title("Life Insurance News Curator")
+# Define the topics to search for
+topics = {
+    "Annuities": "annuities",
+    "Pension Risk Transfer": "pension risk transfer",
+    "Bermuda Reinsurance": "Bermuda reinsurance",
+    "Cyberattacks in Life Insurance": "cyberattacks life insurance",
+    "Technology in Life Insurance": "technology life insurance"
+}
 
-# Fetch news articles when the button is clicked
+# Create a dropdown to select a topic
+selected_topic = st.selectbox('Select a topic to fetch news:', list(topics.keys()))
+
+# Fetch and display news articles for the selected topic
 if st.button('Fetch News'):
-    articles_by_topic, topic_counts = fetch_news()
-    st.write("### Number of Articles by Topic")
-    for topic, count in topic_counts.items():
-        st.write(f"{topic}: {count}")
+    query = topics[selected_topic]
+    articles = fetch_news(api_key, query)
 
-    # Display articles by topic
-    for topic, articles in articles_by_topic.items():
-        st.write(f"### Articles for '{topic}'")
-        for title, link in articles:
-            st.write(f"- **{title}** - [Read more]({link})")
+    if articles:
+        # Sort articles by publication date (newest first)
+        articles.sort(key=lambda x: x['publishedAt'], reverse=True)
 
-
+        st.subheader(f'News Articles for: {selected_topic}')
+        for article in articles:
+            st.write(f"**Title:** [{article['title']}]({article['url']})")
+            st.write(f"**Source:** {article['source']['name']} | **Published At:** {article['publishedAt']}")
+            st.write("---")
 
